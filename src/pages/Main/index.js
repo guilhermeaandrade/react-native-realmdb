@@ -35,19 +35,28 @@ export default function Main() {
     };
     const realm = await getRealm();
     realm.write(() => {
-      realm.create('Repository', data);
+      realm.create('Repository', data, 'modified');
     });
+
+    return data;
   }
   async function handleAddRepository() {
     try {
       const response = await api.get(`/repos/${input}`);
-      await saveRepository(response.data);
+      const data = await saveRepository(response.data);
+      setRepositories(repositories.map(repo => (repo.id === data.id ? data : repo)));
       setInput('');
       setError(false);
       Keyboard.dismiss();
     } catch (err) {
       setError(true);
     }
+  }
+
+  async function handleRefreshRepository(repository) {
+    const response = await api.get(`/repos/${repository.fullname}`);
+    const data = await saveRepository(response.data);
+    setRepositories(repositories.map(repo => (repo.id === data.id ? data : repo)));
   }
 
   return (
@@ -71,7 +80,9 @@ export default function Main() {
         keyboardShouldPersistTap="handled"
         data={repositories}
         keyExtractor={item => String(item.id)}
-        renderItem={({ item }) => <Repository data={item} />}
+        renderItem={({ item }) => (
+          <Repository data={item} onRefresh={() => handleRefreshRepository(item)} />
+        )}
       />
     </Container>
   );
